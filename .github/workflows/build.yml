@@ -23,19 +23,20 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path output_dist
 
-          # 1. C# (.NET) 프로젝트들을 실행에 필요한 의존성 파일과 함께 Publish
+          # 1. C# (.NET) 프로젝트들을 각각의 독자적인 폴더로 Self-Contained Publish
           Get-ChildItem -Recurse -Filter *.csproj | ForEach-Object {
-            Write-Host "Publishing C# Project: $($_.FullName)"
-            dotnet publish $_.FullName -c Release -o output_dist --no-self-contained
+            $projName = [System.IO.Path]::GetFileNameWithoutExtension($_.Name)
+            Write-Host "Publishing C# Project: $projName"
+            dotnet publish $_.FullName -c Release -o "output_dist\$projName" --self-contained true -r win-x64
           }
 
-          # 2. C++ (.vcxproj) 프로젝트 빌드 및 output_dist로 복사
+          # 2. C++ (.vcxproj) 프로젝트 빌드 및 output_dist 루트로 복사
           Get-ChildItem -Recurse -Filter *.vcxproj | ForEach-Object {
             Write-Host "Building C++ Project: $($_.FullName)"
             msbuild $_.FullName /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v143
           }
           
-          # C++ 결과물(.exe, .dll) output_dist 폴더로 수집
+          # C++ 결과물(.exe, .dll) output_dist 루트 폴더로 수집
           Get-ChildItem -Recurse -Include *.exe, *.dll | Where-Object { 
             $_.FullName -notlike "*\output_dist\*" -and 
             $_.FullName -notlike "*\obj\*" -and 
