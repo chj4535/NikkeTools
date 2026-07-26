@@ -19,24 +19,25 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Find and Build Solution
+      - name: Build All Projects
         run: |
-          $sln = Get-ChildItem -Recurse -Filter *.sln | Select-Object -First 1
-          if (-not $sln) {
-            Write-Error "Solution file (.sln) not found!"
-            exit 1
+          # 1. C# (.NET) 솔루션 및 프로젝트 빌드
+          Get-ChildItem -Recurse -Filter *.csproj | ForEach-Object {
+            Write-Host "Building C# Project: $($_.FullName)"
+            dotnet build $_.FullName -c Release
           }
-          Write-Host "Found solution: $($sln.FullName)"
-          
-          # Restore & Build
-          msbuild $sln.FullName -t:restore
-          msbuild $sln.FullName /p:Configuration=Release /p:Platform="x64" /p:PlatformToolset=v143
+
+          # 2. C++ (.vcxproj) 프로젝트 빌드 (MetadataDumper 등)
+          Get-ChildItem -Recurse -Filter *.vcxproj | ForEach-Object {
+            Write-Host "Building C++ Project: $($_.FullName)"
+            msbuild $_.FullName /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v143
+          }
         shell: powershell
 
       - name: Collect Output Files
         run: |
           New-Item -ItemType Directory -Force -Path output
-          Get-ChildItem -Recurse -Include *.exe, *.dll, *.bat, *.py, *.proto | Where-Object { $_.FullName -notlike "*\obj\*" } | Copy-Item -Destination output -Force
+          Get-ChildItem -Recurse -Include *.exe, *.dll, *.bat, *.py, *.proto | Where-Object { $_.FullName -notlike "*\obj\*" -and $_.FullName -notlike "*\ref\*" } | Copy-Item -Destination output -Force
         shell: powershell
 
       - name: Upload Compiled Files
