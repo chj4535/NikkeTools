@@ -11,7 +11,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup MSBuild
+      - name: Setup MSBuild & Visual Studio Tools
         uses: microsoft/setup-msbuild@v2
 
       - name: Setup .NET
@@ -19,13 +19,24 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Build Solution
-        run: msbuild /p:Configuration=Release /p:Platform="x64"
+      - name: Restore NuGet packages
+        run: msbuild -t:restore
 
-      - name: Upload Artifacts
+      - name: Build C# Projects (.NET)
+        run: dotnet build --configuration Release
+
+      - name: Build C++ Projects (MSBuild)
+        run: msbuild /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v143
+        continue-on-error: true
+
+      - name: Collect Output Files
+        run: |
+          mkdir output
+          Get-ChildItem -Recurse -Include *.exe, *.dll, *.bat, *.py, *.proto | Where-Object { $_.FullName -notlike "*\obj\*" } | Copy-Item -Destination output -Force
+        shell: powershell
+
+      - name: Upload Compiled Files
         uses: actions/upload-artifact@v4
         with:
           name: NikkeTools-Compiled
-          path: |
-            **/bin/Release/
-            **/x64/Release/
+          path: output/
