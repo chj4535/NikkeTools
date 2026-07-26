@@ -36,12 +36,16 @@ jobs:
 
       - name: Collect Output Files
         run: |
-          New-Item -ItemType Directory -Force -Path output
-          Get-ChildItem -Recurse -Include *.exe, *.dll, *.bat, *.py, *.proto | Where-Object { $_.FullName -notlike "*\obj\*" -and $_.FullName -notlike "*\ref\*" } | Copy-Item -Destination output -Force
+          New-Item -ItemType Directory -Force -Path output_dist
+          Get-ChildItem -Recurse -Include *.exe, *.dll, *.bat, *.py, *.proto | Where-Object { 
+            $_.FullName -notlike "*\output_dist\*" -and 
+            $_.FullName -notlike "*\obj\*" -and 
+            $_.FullName -notlike "*\ref\*" 
+          } | Copy-Item -Destination output_dist -Force
         shell: powershell
 
       - name: Upload Compiled Files
         uses: actions/upload-artifact@v4
         with:
           name: NikkeTools-Compiled
-          path: output/
+          path: output_dist/
