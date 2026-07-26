@@ -11,7 +11,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup MSBuild & Visual Studio Tools
+      - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
       - name: Setup .NET
@@ -19,19 +19,23 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Restore NuGet packages
-        run: msbuild -t:restore
-
-      - name: Build C# Projects (.NET)
-        run: dotnet build --configuration Release
-
-      - name: Build C++ Projects (MSBuild)
-        run: msbuild /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v143
-        continue-on-error: true
+      - name: Find and Build Solution
+        run: |
+          $sln = Get-ChildItem -Recurse -Filter *.sln | Select-Object -First 1
+          if (-not $sln) {
+            Write-Error "Solution file (.sln) not found!"
+            exit 1
+          }
+          Write-Host "Found solution: $($sln.FullName)"
+          
+          # Restore & Build
+          msbuild $sln.FullName -t:restore
+          msbuild $sln.FullName /p:Configuration=Release /p:Platform="x64" /p:PlatformToolset=v143
+        shell: powershell
 
       - name: Collect Output Files
         run: |
-          mkdir output
+          New-Item -ItemType Directory -Force -Path output
           Get-ChildItem -Recurse -Include *.exe, *.dll, *.bat, *.py, *.proto | Where-Object { $_.FullName -notlike "*\obj\*" } | Copy-Item -Destination output -Force
         shell: powershell
 
